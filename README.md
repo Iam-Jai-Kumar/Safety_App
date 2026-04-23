@@ -94,7 +94,7 @@ Low latency
 
 1. Clone Repository  
 
-git clone https://github.com/your-username/ser-realtime-app.git  
+git clone https://github.com/Iam-Jai-Kumar/Safety_App  
 cd Safety_App  
 
 2. Backend Setup  
