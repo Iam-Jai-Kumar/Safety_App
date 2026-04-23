@@ -1,0 +1,10 @@
+*env/
+__pycache__/
+*.h5
+*.keras
+*.pkl
+*.npy
+node_modules/
+build/
+dist/
+*.log
