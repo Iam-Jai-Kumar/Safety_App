@@ -8,6 +8,8 @@ def extract_hybrid_features(file_path, max_pad_len=128):
     if len(y) < min_samples:
         y = np.pad(y, (0, min_samples - len(y)))
 
+    y = librosa.effects.preemphasis(y)
+    
     y = librosa.util.normalize(y)
 
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)

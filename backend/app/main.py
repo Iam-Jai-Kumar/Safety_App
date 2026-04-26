@@ -14,6 +14,7 @@ STEP_SECONDS = 1     # how often to predict
 WINDOW_SIZE = SAMPLE_RATE * WINDOW_SECONDS
 STEP_SIZE = SAMPLE_RATE * STEP_SECONDS
 
+CONF_THRESHOLD = 0.5  # confidence threshold
 
 @app.websocket("/ws/audio")
 async def websocket_audio(ws: WebSocket):
@@ -40,6 +41,11 @@ async def websocket_audio(ws: WebSocket):
 
                 # Predict
                 result = predict_emotion(temp.name)
+
+                # Applying confidence threshold at streaming level
+                if "confidence" in result:
+                    if result["confidence"] < CONF_THRESHOLD:
+                        result["top_emotion"] = "uncertain"
 
                 await ws.send_json(result)
 
