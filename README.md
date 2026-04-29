@@ -82,7 +82,7 @@ CNN + BiLSTM Model OR fine-tuned Wav2Vec 2.0 Transformer model.
 Emotion Prediction   
       ↓  
 Frontend Display  
-      ↓
+      ↓  
 Send Alerts (If Distress detected)
 
 # Real-Time Processing
@@ -128,18 +128,17 @@ pip install "uvicorn[standard]"
 Run backend:  
 uvicorn app.main:app --reload  
 
-3. Frontend Setup  
+4. Frontend Setup  
 
 cd frontend  
 npm install  
 npm start  
 
-API Endpoints:  
-WebSocket  
-ws://localhost:8000/ws/audio  
-  
-HTTP POST  
-http://127.0.0.1:8000/trigger-alert  
+### API Endpoints
+- **WebSocket (Real-time Streaming):**  
+  `ws://localhost:8000/ws/audio`
+- **HTTP POST (Emergency Alerts):**  
+  `http://localhost:8000/trigger-alert`
 
 
 # Important Notes  
