@@ -10,6 +10,11 @@ function App() {
     const historyRef = useRef([]);
     const wsRef = useRef(null);
 
+    // Alert System Refs
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const isAlertingRef = useRef(false); // Prevents multiple simultaneous alerts
+
     // Smoothing (moving average)
     const smoothPredictions = (newPreds) => {
         historyRef.current.push(newPreds);
@@ -33,9 +38,63 @@ function App() {
         return avg;
     };
 
+    // Alert Sending Logic
+    const sendAlertToBackend = async (blob, emotion) => {
+        const formData = new FormData();
+        formData.append("audio", blob, "distress_signal.wav");
+        formData.append("emotion", emotion);
+
+        try {
+            await fetch("http://127.0.0.1:8000/trigger-alert", {
+                method: "POST",
+                body: formData,
+            });
+            console.log("Guardian Alert Sent");
+        } catch (err) {
+            console.error("Failed to send alert:", err);
+        } finally {
+            isAlertingRef.current = false;
+        }
+    };
+
+    // Audio Capture Logic
+    const captureDistressAudio = (emotion) => {
+        if (isAlertingRef.current) return;
+        isAlertingRef.current = true;
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                sendAlertToBackend(audioBlob, emotion);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            // Record for 5 seconds to give guardian context
+            setTimeout(() => {
+                if (mediaRecorder.state === "recording") mediaRecorder.stop();
+            }, 5000);
+        }).catch(err => {
+            console.error("Mic access denied for alert:", err);
+            isAlertingRef.current = false;
+        });
+    };
+
     // Distress detection → update icon state
-    const checkDistress = (preds) => {
+    const checkDistress = (preds, currentTop) => {
         if (preds["fearful"] > 0.6 || preds["angry"] > 0.6) {
+            // Trigger alert only if we aren't already in a distress state
+            if (!isDistress) {
+                captureDistressAudio(currentTop);
+            }
             setIsDistress(true);
         } else {
             setIsDistress(false);
@@ -52,26 +111,22 @@ function App() {
 
             startStreaming(ws, (data) => {
                 if (data.predictions) {
-                    // Get the smoothed averages
                     const smooth = smoothPredictions(data.predictions);
                     setPredictions(smooth);
 
-                    // Find the top emotion and confidence FROM the smoothed data
                     const sortedEmotions = Object.entries(smooth).sort((a, b) => b[1] - a[1]);
                     const [sTopEmotion, sConfidence] = sortedEmotions[0];
 
-                    // Update state with smoothed values
-                    // Setting a threshold for "uncertain" emotion
+                    let finalTop = sTopEmotion;
                     if (sConfidence < 0.4) {
                         setTopEmotion("uncertain");
+                        finalTop = "uncertain";
                     } else {
                         setTopEmotion(sTopEmotion);
                     }
 
                     setConfidence(sConfidence);
-
-                    // Running distress check on smoothed values
-                    checkDistress(smooth);
+                    checkDistress(smooth, finalTop);
                 }
             });
         };

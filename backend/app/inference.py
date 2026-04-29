@@ -8,7 +8,7 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-USE_PRETRAINED = False
+USE_PRETRAINED = False # Toggle this to use the pretrained model
 
 if USE_PRETRAINED:
     model_path = r"F:\Safety_App\backend\wav2vec"
@@ -41,7 +41,7 @@ if USE_PRETRAINED:
             top_emotion = labels[top_idx]
             confidence = float(probs[top_idx])
 
-            print(f"Confidence: {confidence:.2f}, Emotion: {top_emotion}")
+            # print(f"Confidence: {confidence:.2f}, Emotion: {top_emotion}")
 
             return {
                 "predictions": prediction_dict,
@@ -77,7 +77,7 @@ else:
             top_emotion = labels[top_idx]
             confidence = float(preds[top_idx])
 
-            print(confidence, top_emotion, prediction_dict)
+            # print(confidence, top_emotion, prediction_dict)
 
             return {
                 "predictions": prediction_dict,
