@@ -14,7 +14,7 @@ function App() {
     const smoothPredictions = (newPreds) => {
         historyRef.current.push(newPreds);
 
-        if (historyRef.current.length > 5) {
+        if (historyRef.current.length > 15) {
             historyRef.current.shift();
         }
 
@@ -52,13 +52,25 @@ function App() {
 
             startStreaming(ws, (data) => {
                 if (data.predictions) {
+                    // Get the smoothed averages
                     const smooth = smoothPredictions(data.predictions);
-
                     setPredictions(smooth);
 
-                    setTopEmotion(data.top_emotion);
-                    setConfidence(data.confidence);
+                    // Find the top emotion and confidence FROM the smoothed data
+                    const sortedEmotions = Object.entries(smooth).sort((a, b) => b[1] - a[1]);
+                    const [sTopEmotion, sConfidence] = sortedEmotions[0];
 
+                    // Update state with smoothed values
+                    // Setting a threshold for "uncertain" emotion
+                    if (sConfidence < 0.4) {
+                        setTopEmotion("uncertain");
+                    } else {
+                        setTopEmotion(sTopEmotion);
+                    }
+
+                    setConfidence(sConfidence);
+
+                    // Running distress check on smoothed values
                     checkDistress(smooth);
                 }
             });
@@ -68,72 +80,161 @@ function App() {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "40px" }}>
-            <h1>Real-Time Emotion Detection</h1>
+        <div style={{
+            backgroundColor: "#0f172a",
+            color: "#f8fafc",
+            minHeight: "100vh",
+            fontFamily: "'Inter', sans-serif",
+            padding: "60px 20px"
+        }}>
+            {/* Centered Header Section */}
+            <div style={{
+                textAlign: "center", // Centering headings
+                marginBottom: "60px"
+            }}>
+                <h1 style={{
+                    fontSize: "3.5rem",
+                    fontWeight: "900",
+                    letterSpacing: "-1px",
+                    margin: "0",
+                    background: "linear-gradient(to right, #38bdf8, #818cf8)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                }}>
+                    Safety App
+                </h1>
+                <p style={{
+                    color: "#94a3b8",
+                    fontSize: "1.2rem",
+                    marginTop: "10px",
+                    letterSpacing: "1px",
+                    textTransform: "uppercase"
+                }}>
+                    Real-Time Emotional Intelligence
+                </p>
 
-            <button onClick={start}>Start Listening</button>
-
-            {/* Distress Indicator */}
-            <div style={{ marginTop: "20px" }}>
-                <h2>Status:</h2>
-                <div
+                <button
+                    onClick={start}
                     style={{
-                        width: "120px",
-                        height: "120px",
-                        borderRadius: "50%",
-                        margin: "auto",
-                        backgroundColor: isDistress ? "red" : "green",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        boxShadow: isDistress
-                            ? "0 0 20px red"
-                            : "0 0 20px green",
+                        marginTop: "30px",
+                        padding: "14px 40px",
+                        borderRadius: "50px",
+                        border: "none",
+                        backgroundColor: "#38bdf8",
+                        color: "#0f172a",
+                        fontSize: "1rem",
+                        fontWeight: "800",
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        boxShadow: "0 0 25px rgba(56, 189, 248, 0.4)",
+                        textTransform: "uppercase"
+                    }}
+                    onMouseOver={(e) => {
+                        e.target.style.transform = "scale(1.05)";
+                        e.target.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.6)";
+                    }}
+                    onMouseOut={(e) => {
+                        e.target.style.transform = "scale(1)";
+                        e.target.style.boxShadow = "0 0 25px rgba(56, 189, 248, 0.4)";
                     }}
                 >
-                    {isDistress ? "DISTRESS" : "SAFE"}
-                </div>
+                    {wsRef.current ? "ANALYZING AUDIO..." : "START ANALYSIS"}
+                </button>
             </div>
 
-            <h2 style={{ marginTop: "20px" }}>
-                Top Emotion: {topEmotion}
-            </h2>
-            <h3>Confidence: {(confidence * 100).toFixed(2)}%</h3>
+            {/* Main Horizontal Container */}
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "stretch",
+                gap: "30px",
+                maxWidth: "1200px",
+                margin: "auto",
+                flexWrap: "wrap"
+            }}>
 
-            <h2>Emotion Probabilities</h2>
-
-            <div style={{ width: "400px", margin: "auto" }}>
-                {Object.entries(predictions).map(([emotion, value]) => (
-                    <div key={emotion} style={{ marginBottom: "10px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span>{emotion}</span>
-                            <span>{(value * 100).toFixed(1)}%</span>
-                        </div>
-
-                        <div
-                            style={{
-                                height: "12px",
-                                background: "#eee",
-                                borderRadius: "6px",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: `${value * 100}%`,
-                                    height: "100%",
-                                    background:
-                                        emotion === "fearful" || emotion === "angry"
-                                            ? "red"
-                                            : "green",
-                                    borderRadius: "6px",
-                                }}
-                            />
-                        </div>
+                {/* Left Card: Status & Top Result */}
+                <div style={{
+                    flex: "1",
+                    minWidth: "350px",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    padding: "50px 40px",
+                    borderRadius: "28px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(12px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    textAlign: "center"
+                }}>
+                    <div
+                        style={{
+                            width: "150px",
+                            height: "150px",
+                            borderRadius: "50%",
+                            margin: "0 auto 40px",
+                            backgroundColor: isDistress ? "#ef4444" : "#10b981",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1.3rem",
+                            fontWeight: "900",
+                            letterSpacing: "2px",
+                            boxShadow: isDistress ? "0 0 50px rgba(239, 68, 68, 0.5)" : "0 0 50px rgba(16, 185, 129, 0.5)",
+                            transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)"
+                        }}
+                    >
+                        {isDistress ? "DISTRESS" : "SECURE"}
                     </div>
-                ))}
+
+                    <h2 style={{ color: "#64748b", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "3px", marginBottom: "15px" }}>Detected Emotion</h2>
+                    <h3 style={{ fontSize: "3rem", margin: "0", color: "#f8fafc", textTransform: "capitalize", fontWeight: "800" }}>{topEmotion}</h3>
+                    <div style={{ fontSize: "1.6rem", color: "#38bdf8", fontWeight: "300", marginTop: "10px" }}>
+                        {(confidence * 100).toFixed(1)}% <span style={{ fontSize: '0.9rem', color: '#475569' }}>confidence</span>
+                    </div>
+                </div>
+
+                {/* Right Card: Probability Bars */}
+                <div style={{
+                    flex: "1.4",
+                    minWidth: "400px",
+                    background: "rgba(30, 41, 59, 0.5)",
+                    padding: "40px",
+                    borderRadius: "28px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(12px)"
+                }}>
+                    <h2 style={{ textAlign: "left", marginBottom: "35px", fontSize: "1.1rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1px" }}>Spectral Breakdown</h2>
+
+                    {Object.entries(predictions).length === 0 ? (
+                        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569", fontStyle: "italic" }}>
+                            Waiting for audio stream input...
+                        </div>
+                    ) : (
+                        Object.entries(predictions).sort((a, b) => b[1] - a[1]).map(([emotion, value]) => (
+                            <div key={emotion} style={{ marginBottom: "22px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "0.95rem" }}>
+                                    <span style={{ textTransform: "capitalize", fontWeight: "600", color: "#cbd5e1" }}>{emotion}</span>
+                                    <span style={{ color: "#64748b", fontFamily: "monospace" }}>{(value * 100).toFixed(1)}%</span>
+                                </div>
+
+                                <div style={{ height: "10px", background: "#0f172a", borderRadius: "20px", overflow: "hidden" }}>
+                                    <div
+                                        style={{
+                                            width: `${value * 100}%`,
+                                            height: "100%",
+                                            background: emotion === "fearful" || emotion === "angry"
+                                                ? "linear-gradient(90deg, #f87171, #ef4444)"
+                                                : "linear-gradient(90deg, #34d399, #10b981)",
+                                            borderRadius: "20px",
+                                            transition: "width 0.5s ease-out",
+                                            boxShadow: value > 0.2 ? (emotion === "fearful" || emotion === "angry" ? "0 0 12px rgba(239, 68, 68, 0.4)" : "0 0 12px rgba(16, 185, 129, 0.4)") : "none"
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
     );
